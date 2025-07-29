@@ -1,0 +1,47 @@
+services:
+  gorse:
+    image: zhenghaoz/gorse-in-one
+    restart: unless-stopped # HTTP port、
+    ports:
+      - 8086:8086
+      - 8088:8088 # gorse-web                                                                                                                                                                             
+    environment:
+      # Use Redis as cache storage backend.
+      GORSE_CACHE_STORE: redis://redis:6379
+      # Use PostgreSQL as data storage backend.
+      GORSE_DATA_STORE: postgres://leegant:woshi@postgres:5432/library?sslmode=disable
+    command: >
+      --log-path /var/log/gorse/master.log
+      --cache-path /var/lib/gorse/master_cache.data
+    volumes:
+      # Mount the configuration file.
+      - ./config.toml:/etc/gorse/config.toml
+    depends_on:
+      - redis
+      - postgres
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/data
+
+  postgres:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: leegant
+      POSTGRES_PASSWORD: woshi
+      POSTGRES_DB: library
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  redis-data:
+  postgres-data:
+
+
