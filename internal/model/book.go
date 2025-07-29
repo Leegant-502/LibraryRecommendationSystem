@@ -4,8 +4,41 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"library/internal/domain/valueobject"
 )
+
+// BookStatus 图书状态枚举
+type BookStatus string
+
+const (
+	// BookStatusAvailable 可借阅
+	BookStatusAvailable BookStatus = "available"
+	// BookStatusBorrowed 已借出
+	BookStatusBorrowed BookStatus = "borrowed"
+	// BookStatusReserved 已预约
+	BookStatusReserved BookStatus = "reserved"
+	// BookStatusMaintenance 维护中
+	BookStatusMaintenance BookStatus = "maintenance"
+	// BookStatusLost 丢失
+	BookStatusLost BookStatus = "lost"
+	// BookStatusDamaged 损坏
+	BookStatusDamaged BookStatus = "damaged"
+)
+
+// String 返回状态的字符串表示
+func (s BookStatus) String() string {
+	return string(s)
+}
+
+// IsValid 检查状态是否有效
+func (s BookStatus) IsValid() bool {
+	switch s {
+	case BookStatusAvailable, BookStatusBorrowed, BookStatusReserved,
+		BookStatusMaintenance, BookStatusLost, BookStatusDamaged:
+		return true
+	default:
+		return false
+	}
+}
 
 // 最外层响应结构体
 type Response struct {
@@ -32,23 +65,23 @@ type Record struct {
 
 // BookInfo 图书信息表
 type BookInfo struct {
-	ID                   decimal.Decimal        `json:"id" gorm:"primaryKey"`
-	BookID               string                 `json:"book_id" gorm:"unique;column:book_id"`
-	BookBarcode          string                 `json:"book_barcode" gorm:"unique"`
-	Title                string                 `json:"title" gorm:"not null"`
-	PublicationNumber    string                 `json:"publication_number"`
-	PrimaryAuthor        string                 `json:"primary_author"`
-	ClassificationNumber string                 `json:"classification_number"`
-	LanguageCode         string                 `json:"language_code"`
-	Edition              string                 `json:"edition"`
-	Publisher            string                 `json:"publisher"`
-	PublicationPlace     string                 `json:"publication_place"`
-	PublicationDate      time.Time              `json:"publication_date"`
-	DistributionUnit     string                 `json:"distribution_unit"`
-	Notes                string                 `json:"notes"`
-	Status               valueobject.BookStatus `json:"status" gorm:"type:varchar(20);default:'available'"`
-	CreatedAt            time.Time              `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt            time.Time              `json:"updated_at" gorm:"autoUpdateTime"`
+	ID                   decimal.Decimal `json:"id" gorm:"primaryKey"`
+	BookID               string          `json:"book_id" gorm:"unique;column:book_id"`
+	BookBarcode          string          `json:"book_barcode" gorm:"unique"`
+	Title                string          `json:"title" gorm:"not null"`
+	PublicationNumber    string          `json:"publication_number"`
+	PrimaryAuthor        string          `json:"primary_author"`
+	ClassificationNumber string          `json:"classification_number"`
+	LanguageCode         string          `json:"language_code"`
+	Edition              string          `json:"edition"`
+	Publisher            string          `json:"publisher"`
+	PublicationPlace     string          `json:"publication_place"`
+	PublicationDate      time.Time       `json:"publication_date"`
+	DistributionUnit     string          `json:"distribution_unit"`
+	Notes                string          `json:"notes"`
+	Status               BookStatus      `json:"status" gorm:"type:varchar(20);default:'available'"`
+	CreatedAt            time.Time       `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt            time.Time       `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // TableName 指定表名

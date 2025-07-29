@@ -7,7 +7,7 @@ import (
 
 	"library/api"
 	"library/config"
-	"library/internal/domain/model"
+	"library/internal/model"
 	"library/internal/repository"
 	"library/internal/service"
 	"library/routes"

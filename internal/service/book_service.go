@@ -2,8 +2,8 @@ package service
 
 import (
 	"fmt"
-	"library/internal/domain/model"
 	"library/internal/gorse"
+	"library/internal/model"
 	"library/internal/repository"
 	"time"
 )

@@ -45,7 +45,7 @@ func FetchAndSaveBooks(db *gorm.DB) error {
 	if err != nil {
 		return fmt.Errorf("获取图书数据失败: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close().Error()
 
 	// 读取响应内容
 	body, err := io.ReadAll(resp.Body)
