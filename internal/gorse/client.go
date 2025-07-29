@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -58,7 +59,12 @@ func (c *Client) InsertFeedback(feedbackType, userID, itemID string, timestamp i
 	if err != nil {
 		return fmt.Errorf("发送请求失败: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Printf("关闭响应体失败: %v", err)
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("API返回错误状态码: %d", resp.StatusCode)
@@ -116,7 +122,12 @@ func (c *Client) getItems(url string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Println("关闭响应体失败:", err)
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API返回错误状态码: %d", resp.StatusCode)
