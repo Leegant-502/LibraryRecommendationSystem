@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// 自动迁移数据库表
-	err = db.AutoMigrate(&model.BookInfo{})
+	err = db.AutoMigrate(&model.BookInfo{}, &model.UserBehavior{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

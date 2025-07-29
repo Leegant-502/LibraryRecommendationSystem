@@ -102,11 +102,11 @@ func (s *BookService) getDefaultRecommendations(limit int) ([]string, error) {
 		}
 	}
 
-	return recommendations[:min(len(recommendations), limit)], nil
+	return recommendations[:minInt(len(recommendations), limit)], nil
 }
 
-// min 返回两个整数中的较小值
-func min(a, b int) int {
+// minInt 返回两个整数中的较小值
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

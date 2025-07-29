@@ -102,7 +102,7 @@
       "title": "深入理解计算机系统",
       "primary_author": "Randal E. Bryant",
       "publisher": "机械工业出版社",
-      "publication_date": "2016-11-01T00:00:00Z",
+      "publication_date": "2016-11-01T00:00:00Z"
       // ... 其他图书信息
     }
   ],
@@ -128,8 +128,7 @@
     {
       "id": "456",
       "title": "算法导论",
-      "primary_author": "Thomas H. Cormen",
-      // ... 其他图书信息
+      "primary_author": "Thomas H. Cormen"
     }
   ],
   "count": 10,
@@ -153,8 +152,8 @@
     {
       "id": "789",
       "title": "数据结构与算法分析",
-      "primary_author": "Mark Allen Weiss",
-      // ... 其他图书信息
+      "primary_author": "Mark Allen Weiss"
+    
     }
   ],
   "count": 10,
@@ -190,3 +189,28 @@
 - **多种推荐算法**：支持个性化推荐、热门推荐、相似推荐
 - **完整图书信息**：推荐结果包含图书的完整信息，而不仅仅是标题
 - **智能行为分析**：根据停留时间等行为特征智能判断用户兴趣程度
+
+## 测试API
+
+系统提供了一个测试脚本 `test_api.go`，可以用来验证所有API接口是否正常工作：
+
+```bash
+# 启动服务器
+./library.exe
+
+# 在另一个终端运行测试
+go run test_api.go
+```
+
+## 部署要求
+
+1. **Gorse推荐引擎**：需要先启动Gorse服务
+2. **PostgreSQL数据库**：需要配置数据库连接
+3. **图书数据**：需要在数据库中有图书信息数据
+
+## 配置文件
+
+确保 `config/config.go` 中包含正确的配置信息：
+- 数据库连接信息
+- Gorse服务端点和API密钥
+- 服务器端口配置
