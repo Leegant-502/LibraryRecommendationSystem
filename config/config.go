@@ -51,7 +51,7 @@ func NewConfig() *Config {
 	// 加载环境变量
 	LoadEnv()
 
-	return &Config{
+	cfg := &Config{
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
@@ -68,4 +68,11 @@ func NewConfig() *Config {
 			APIKey:   getEnv("GORSE_API_KEY", ""),
 		},
 	}
+
+	// 验证关键配置
+	if cfg.Gorse.APIKey == "" {
+		log.Printf("警告: GORSE_API_KEY 未设置，推荐功能可能无法正常工作")
+	}
+
+	return cfg
 }

@@ -1,6 +1,11 @@
 package routes
 
 import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"library/api"
 )
@@ -9,24 +14,92 @@ import (
 func SetupRoutes(bookHandler *api.BookHandler, behaviorHandler *api.BehaviorTrackingHandler) *gin.Engine {
 	router := gin.Default()
 
-	// 用户行为记录路由（保留原有接口以兼容现有前端）
-	router.POST("/books/view", bookHandler.RecordView)          // 记录图书浏览
-	router.POST("/books/click", bookHandler.RecordClick)        // 记录图书点击
-	router.POST("/books/read", bookHandler.RecordRead)          // 记录图书阅读
-	router.POST("/books/stay-time", bookHandler.RecordStayTime) // 记录图书页面停留时间
+	// 添加中间件
+	setupMiddleware(router)
 
-	// 新的统一用户行为追踪API
-	router.POST("/behavior/track", behaviorHandler.TrackUserBehavior) // 统一的用户行为追踪接口
+	// 健康检查和系统信息
+	router.GET("/health", healthCheck)
+	router.GET("/version", versionInfo)
 
-	// 推荐相关路由（保留原有接口以兼容现有前端）
-	router.GET("/recommendations", bookHandler.GetRecommendations) // 获取个性化推荐
-	router.GET("/books/popular", bookHandler.GetPopularBooks)      // 获取热门图书
-	router.GET("/books/similar", bookHandler.GetSimilarBooks)      // 获取相似图书
+	// API版本分组
+	v1 := router.Group("/api/v1")
+	{
+		// 用户行为追踪
+		behavior := v1.Group("/behavior")
+		{
+			behavior.POST("/track", behaviorHandler.TrackUserBehavior)
+		}
 
-	// 新的基于用户行为的推荐API
-	router.GET("/behavior/recommendations", behaviorHandler.GetUserRecommendations) // 基于用户行为的个性化推荐
-	router.GET("/behavior/popular", behaviorHandler.GetBehaviorBasedPopularBooks)   // 基于用户行为的热门图书
-	router.GET("/behavior/similar", behaviorHandler.GetBehaviorBasedSimilarBooks)   // 基于用户行为的相似图书
+		// 推荐系统
+		recommendations := v1.Group("/recommendations")
+		{
+			recommendations.GET("/personal", behaviorHandler.GetUserRecommendations)
+			recommendations.GET("/popular", behaviorHandler.GetBehaviorBasedPopularBooks)
+			recommendations.GET("/similar", behaviorHandler.GetBehaviorBasedSimilarBooks)
+		}
+	}
+
+	// 兼容旧版本API（标记为废弃）
+	deprecated := router.Group("/deprecated")
+	{
+		deprecated.POST("/books/view", bookHandler.RecordView)
+		deprecated.POST("/books/click", bookHandler.RecordClick)
+		deprecated.POST("/books/read", bookHandler.RecordRead)
+		deprecated.POST("/books/stay-time", bookHandler.RecordStayTime)
+		deprecated.GET("/recommendations", bookHandler.GetRecommendations)
+		deprecated.GET("/books/popular", bookHandler.GetPopularBooks)
+		deprecated.GET("/books/similar", bookHandler.GetSimilarBooks)
+	}
 
 	return router
+}
+
+// setupMiddleware 设置中间件
+func setupMiddleware(router *gin.Engine) {
+	// CORS中间件
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// 请求日志中间件
+	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
+			param.ClientIP,
+			param.TimeStamp.Format(time.RFC1123),
+			param.Method,
+			param.Path,
+			param.Request.Proto,
+			param.StatusCode,
+			param.Latency,
+			param.Request.UserAgent(),
+			param.ErrorMessage,
+		)
+	}))
+
+	// 恢复中间件
+	router.Use(gin.Recovery())
+}
+
+// healthCheck 健康检查端点
+func healthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":    "healthy",
+		"timestamp": time.Now().Unix(),
+		"service":   "library-recommendation-system",
+	})
+}
+
+// versionInfo 版本信息端点
+func versionInfo(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"version":     "1.0.0",
+		"build_time":  "2024-01-01",
+		"go_version":  "1.21",
+		"description": "基于用户行为的图书推荐系统",
+	})
 }
