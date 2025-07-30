@@ -2,7 +2,6 @@ package routes
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -11,35 +10,32 @@ import (
 )
 
 // SetupRoutes 设置API路由
-func SetupRoutes(bookHandler *api.BookHandler, behaviorHandler *api.BehaviorTrackingHandler) *gin.Engine {
+func SetupRoutes(unifiedHandler *api.UnifiedHandler, bookHandler *api.BookHandler) *gin.Engine {
 	router := gin.Default()
 
 	// 添加中间件
 	setupMiddleware(router)
 
 	// 健康检查和系统信息
-	router.GET("/health", healthCheck)
-	router.GET("/version", versionInfo)
+	router.GET("/health", unifiedHandler.HealthCheck)
+	router.GET("/version", unifiedHandler.GetVersion)
 
 	// API版本分组
 	v1 := router.Group("/api/v1")
 	{
 		// 用户行为追踪
-		behavior := v1.Group("/behavior")
-		{
-			behavior.POST("/track", behaviorHandler.TrackUserBehavior)
-		}
+		v1.POST("/behavior/track", unifiedHandler.TrackUserBehavior)
 
 		// 推荐系统
 		recommendations := v1.Group("/recommendations")
 		{
-			recommendations.GET("/personal", behaviorHandler.GetUserRecommendations)
-			recommendations.GET("/popular", behaviorHandler.GetBehaviorBasedPopularBooks)
-			recommendations.GET("/similar", behaviorHandler.GetBehaviorBasedSimilarBooks)
+			recommendations.GET("/personal", unifiedHandler.GetPersonalizedRecommendations)
+			recommendations.GET("/popular", unifiedHandler.GetPopularBooks)
+			recommendations.GET("/similar", unifiedHandler.GetSimilarBooks)
 		}
 	}
 
-	// 兼容旧版本API（标记为废弃）
+	// 兼容旧版本API（标记为废弃，逐步迁移）
 	deprecated := router.Group("/deprecated")
 	{
 		deprecated.POST("/books/view", bookHandler.RecordView)
@@ -83,23 +79,4 @@ func setupMiddleware(router *gin.Engine) {
 
 	// 恢复中间件
 	router.Use(gin.Recovery())
-}
-
-// healthCheck 健康检查端点
-func healthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":    "healthy",
-		"timestamp": time.Now().Unix(),
-		"service":   "library-recommendation-system",
-	})
-}
-
-// versionInfo 版本信息端点
-func versionInfo(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"version":     "1.0.0",
-		"build_time":  "2024-01-01",
-		"go_version":  "1.21",
-		"description": "基于用户行为的图书推荐系统",
-	})
 }

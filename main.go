@@ -60,11 +60,13 @@ func main() {
 	// 初始化依赖
 	bookRepo := repository.NewBookRepository(db)
 	bookService := service.NewBookService(bookRepo, cfg.Gorse.Endpoint, cfg.Gorse.APIKey)
-	bookHandler := api.NewBookHandler(bookService)
-	behaviorHandler := api.NewBehaviorTrackingHandler(bookService)
+
+	// 创建处理器
+	unifiedHandler := api.NewUnifiedHandler(bookService)
+	bookHandler := api.NewBookHandler(bookService) // 保留用于兼容性
 
 	// 设置路由
-	mux := routes.SetupRoutes(bookHandler, behaviorHandler)
+	mux := routes.SetupRoutes(unifiedHandler, bookHandler)
 
 	// 创建服务器
 	server := &http.Server{

@@ -22,37 +22,84 @@ func NewBookService(bookRepo repository.BookRepository, gorseEndpoint, gorseAPIK
 	}
 }
 
-// RecordBookView 记录图书浏览行为
+// RecordUserBehavior 统一的用户行为记录接口
+func (s *BookService) RecordUserBehavior(req *UserBehaviorRequest) error {
+	// 验证请求参数
+	if err := req.Validate(); err != nil {
+		return fmt.Errorf("参数验证失败: %w", err)
+	}
+
+	var extra map[string]interface{}
+	feedbackType := req.BehaviorType
+
+	// 根据行为类型处理额外数据
+	switch req.BehaviorType {
+	case "read":
+		extra = map[string]interface{}{
+			"read_time": *req.ReadTimeMinutes,
+		}
+	case "stay_time":
+		extra = map[string]interface{}{
+			"stay_time": *req.StayTimeSeconds,
+		}
+		// 根据停留时间决定反馈类型
+		if *req.StayTimeSeconds >= 30 {
+			feedbackType = "read"
+		} else {
+			feedbackType = "view"
+		}
+	case "view", "click":
+		// 这些行为类型不需要额外处理
+		extra = req.Extra
+	}
+
+	// 合并用户提供的额外信息
+	if req.Extra != nil {
+		if extra == nil {
+			extra = make(map[string]interface{})
+		}
+		for k, v := range req.Extra {
+			extra[k] = v
+		}
+	}
+
+	// 记录到Gorse推荐系统
+	return s.gorseClient.InsertFeedback(feedbackType, req.UserID, req.BookTitle, time.Now().Unix(), extra)
+}
+
+// 保留原有方法以兼容现有代码
 func (s *BookService) RecordBookView(userID, title string) error {
-	return s.gorseClient.InsertFeedback("view", userID, title, time.Now().Unix(), nil)
+	return s.RecordUserBehavior(&UserBehaviorRequest{
+		UserID:       userID,
+		BookTitle:    title,
+		BehaviorType: "view",
+	})
 }
 
-// RecordBookClick 记录图书点击行为
 func (s *BookService) RecordBookClick(userID, title string) error {
-	return s.gorseClient.InsertFeedback("click", userID, title, time.Now().Unix(), nil)
+	return s.RecordUserBehavior(&UserBehaviorRequest{
+		UserID:       userID,
+		BookTitle:    title,
+		BehaviorType: "click",
+	})
 }
 
-// RecordBookRead 记录图书阅读行为
 func (s *BookService) RecordBookRead(userID, title string, readTimeMinutes int) error {
-	extra := map[string]interface{}{
-		"read_time": readTimeMinutes,
-	}
-	return s.gorseClient.InsertFeedback("read", userID, title, time.Now().Unix(), extra)
+	return s.RecordUserBehavior(&UserBehaviorRequest{
+		UserID:          userID,
+		BookTitle:       title,
+		BehaviorType:    "read",
+		ReadTimeMinutes: &readTimeMinutes,
+	})
 }
 
-// RecordBookStayTime 记录图书页面停留时间
 func (s *BookService) RecordBookStayTime(userID, title string, stayTimeSeconds int) error {
-	extra := map[string]interface{}{
-		"stay_time": stayTimeSeconds,
-	}
-
-	// 根据停留时间决定反馈类型
-	feedbackType := "view"
-	if stayTimeSeconds >= 30 { // 停留超过30秒视为深度阅读
-		feedbackType = "read"
-	}
-
-	return s.gorseClient.InsertFeedback(feedbackType, userID, title, time.Now().Unix(), extra)
+	return s.RecordUserBehavior(&UserBehaviorRequest{
+		UserID:          userID,
+		BookTitle:       title,
+		BehaviorType:    "stay_time",
+		StayTimeSeconds: &stayTimeSeconds,
+	})
 }
 
 // GetRecommendations 获取图书推荐，包含对新用户的处理
