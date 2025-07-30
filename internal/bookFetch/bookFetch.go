@@ -1,6 +1,7 @@
 package bookFetch
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,22 +31,98 @@ type BookInfo struct {
 	UpdatedAt            time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
-// TableName 指定表名
-func (BookInfo) TableName() string {
-	return "book_information"
+type getTokenReq struct {
+	AppId string `json:"appId"`
+	Code  int    `json:"code"`
 }
 
+// TokenResponse token API 响应结构
+type TokenResponse struct {
+	Code    int  `json:"code"`
+	Success bool `json:"success"`
+	Data    struct {
+		Expire int    `json:"expire"`
+		Token  string `json:"token"`
+	} `json:"data"`
+	Msg string `json:"msg"`
+}
+
+type getBookeReq struct {
+	PageNum  int `json:"pageNum"`
+	PageSize int `json:"pageSize"`
+}
+
+func getToken() (string, error) {
+	apiURL := "https://222.204.7.196:33027/api/token/getToken"
+
+	req := getTokenReq{
+		AppId: "1494732411679d",
+		Code:  914,
+	}
+
+	jsonReq, err := json.Marshal(req)
+	if err != nil {
+		return fmt.Sprintln("序列化请求数据失败"), err
+	}
+
+	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(jsonReq))
+	if err != nil {
+		return fmt.Sprintln("获取token失败"), err
+	}
+	defer resp.Body.Close().Error()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Sprintln("读取响应内容失败 "), err
+	}
+
+	var tokenResp TokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return fmt.Sprintln("解析响应内容失败"), err
+	}
+
+	if tokenResp.Code != 200 {
+		return fmt.Sprintln("获取token失败"), err
+	}
+
+	return tokenResp.Data.Token, nil
+	// 读取响应内容
+}
+
+// TableName 指定表名
+
 // FetchAndSaveBooks 从API获取图书数据并保存到数据库
-func FetchAndSaveBooks(db *gorm.DB) error {
+func fetchAndSaveBooks(db *gorm.DB) error {
 	// API endpoint URL
 	apiURL := "https://222.204.7.196:33027/api/dwd_ryy_xszj_tsjbxxzlb"
 
-	// 发送HTTP GET请求
-	resp, err := http.Get(apiURL)
+	//获取token
+	token, err := getToken()
 	if err != nil {
-		return fmt.Errorf("获取图书数据失败: %v", err)
+		return fmt.Errorf("获取token失败: %v", err)
 	}
-	defer resp.Body.Close().Error()
+
+	reqBody := getBookeReq{
+		PageNum:  230,
+		PageSize: 1000,
+	}
+	jsonReq, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("序列化请求数据失败: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewBuffer(jsonReq))
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-H3C-TOKEN", token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("发送请求失败: %v", err)
+	}
 
 	// 读取响应内容
 	body, err := io.ReadAll(resp.Body)
@@ -66,4 +143,13 @@ func FetchAndSaveBooks(db *gorm.DB) error {
 
 	fmt.Printf("成功保存 %d 本图书到数据库\n", len(books))
 	return nil
+}
+
+func TimelyFetchAndSaveBooks(db *gorm.DB) {
+	for {
+		if err := fetchAndSaveBooks(db); err != nil {
+			fmt.Println("定时任务执行失败:", err)
+		}
+		time.Sleep(24 * time.Hour) // 每小时执行一次
+	}
 }
